@@ -38,6 +38,6 @@ def pokemon_creation(nickname,emoji_id,attack1,attack2,attack3,attack4,descripti
     session.add(new_pokemon)
     session.commit()
     return new_pokemon
+def construct_emoji(emoji_name,emoji_id,animated: bool):
+    return f"<{'a' if animated else ''}:{emoji_name}:{emoji_id}>"
 
-
-print(user_already_created("411797205020704768"))
