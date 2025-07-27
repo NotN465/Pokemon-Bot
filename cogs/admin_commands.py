@@ -1,5 +1,6 @@
 import json
-import discord.app_commands
+import discord
+from discord import app_commands
 from discord.ext import commands
 
 import os
@@ -18,15 +19,155 @@ session = Session()
 
 with open(r"D:\pythonProject1\Pokemon bot\config.json") as f:
     data = json.load(f)
+
+class PageView(discord.ui.View):
+    def __init__(self,pokemons):
+        super().__init__()
+        self.page = 5
+        self.right_button = None
+        self.left_button = None
+
+        self.left_arrow_button_func()
+        self.right_arrow_button_func()
+        self.disable_and_enable_buttons(pokemons)
+
+    def right_arrow_button_func(self):
+        self.right_button = discord.ui.Button(label="▶️", style=discord.ButtonStyle.blurple)
+        async def callback(interaction: discord.Interaction):
+            self.page += 5
+            pokemons = session.query(Pokemon).all()
+
+            await self.update(interaction,pokemons)
+        self.right_button.callback = callback
+        self.add_item(self.right_button)
+
+    def left_arrow_button_func(self):
+        self.left_button = discord.ui.Button(label="◀️", style=discord.ButtonStyle.blurple)
+        async def callback(interaction: discord.Interaction):
+            self.page -= 5
+            pokemons = session.query(Pokemon).all()
+
+            await self.update(interaction, pokemons)
+        self.left_button.callback = callback
+        self.add_item(self.left_button)
+    def disable_and_enable_buttons(self,pokemons):
+        # Logic for disabling/enabling the left button
+        if self.page == 5:
+            self.left_button.disabled = True
+        else:
+            self.left_button.disabled = False
+
+        # Logic for disabling/enabling the left button
+        if self.page >= len(pokemons):
+            self.right_button.disabled = True
+        else:
+            self.right_button.disabled = False
+
+    async def update(self,interaction,pokemons):
+        updated_pokemon_embed = discord.Embed(title="Pokemons",color=discord.Colour.brand_green())
+        displayed_pokemons = pokemons[self.page-5:self.page]
+        for pokemon in displayed_pokemons:
+            emoji = session.query(Emoji).filter_by(emoji_id=pokemon.emoji_id).first()
+            constructed_emoji = construct_emoji(emoji_id=emoji.emoji_id, emoji_name=emoji.name, animated=emoji.animated)
+            label = f"{constructed_emoji}{pokemon.nickname}"
+            text = f"Attack 1: {pokemon.attack1}\nAttack 2: {pokemon.attack2}\nAttack 3: {pokemon.attack3}\nAttack 4: {pokemon.attack4}\nMisc: {pokemon.description}"
+            updated_pokemon_embed.add_field(name=label, value=text, inline=False)
+        self.disable_and_enable_buttons(pokemons)
+
+        await interaction.response.edit_message(embed=updated_pokemon_embed,view=self)
+
+
+
+class TakeView(discord.ui.View):
+    def __init__(self,user_data):
+        super().__init__()
+        self.user_data = user_data
+        self.first_pokemon_button()
+        self.second_pokemon_button()
+        self.third_pokemon_button()
+
+    def first_pokemon_button(self):
+        pokemon_id = self.user_data.first_pokemon_id
+        button = NotImplemented
+        label = ""
+        if not pokemon_id:
+            label = "No pokemon"
+            button = discord.ui.Button(label=label, style=discord.ButtonStyle.blurple)
+        else:
+            pokemon_data = session.query(Pokemon).filter_by(id=pokemon_id).first()
+            emoji_data = session.query(Emoji).filter_by(emoji_id=pokemon_data.emoji_id).first()
+            emoji = discord.PartialEmoji(name=emoji_data.name,id=emoji_data.emoji_id,animated=emoji_data.animated)
+            label = f"{pokemon_data.nickname}"
+            button = discord.ui.Button(emoji=emoji,label=label,style=discord.ButtonStyle.blurple)
+        async def callback(interaction:discord.Interaction,b=button):
+            self.user_data.first_pokemon_id = None
+            session.commit()
+            await self.update(interaction)
+
+        button.callback = callback
+        self.add_item(button)
+    def second_pokemon_button(self):
+        pokemon_id = self.user_data.second_pokemon_id
+        button = NotImplemented
+        label = ""
+        if not pokemon_id:
+            label = "No pokemon"
+            button = discord.ui.Button(label=label,style=discord.ButtonStyle.blurple)
+        else:
+            pokemon_data = session.query(Pokemon).filter_by(id=pokemon_id).first()
+            emoji_data = session.query(Emoji).filter_by(emoji_id=pokemon_data.emoji_id).first()
+            emoji = discord.PartialEmoji(name=emoji_data.name,id=emoji_data.emoji_id,animated=emoji_data.animated)
+            label = f"{pokemon_data.nickname}"
+            button = discord.ui.Button(emoji=emoji,label=label,style=discord.ButtonStyle.blurple)
+        async def callback(interaction:discord.Interaction,b=button):
+            self.user_data.second_pokemon_id = None
+            session.commit()
+            await self.update(interaction)
+
+
+        button.callback = callback
+        self.add_item(button)
+    def third_pokemon_button(self):
+        pokemon_id = self.user_data.third_pokemon_id
+        label = ""
+        button = NotImplemented
+        if not pokemon_id:
+            label = "No pokemon"
+            button = discord.ui.Button(label=label,style=discord.ButtonStyle.blurple)
+        else:
+            pokemon_data = session.query(Pokemon).filter_by(id=pokemon_id).first()
+            emoji_data = session.query(Emoji).filter_by(emoji_id=pokemon_data.emoji_id).first()
+            emoji = discord.PartialEmoji(name=emoji_data.name,id=emoji_data.emoji_id,animated=emoji_data.animated) # This is for constructing emojis in buttons
+            label = f"{pokemon_data.nickname}"
+            button = discord.ui.Button(emoji=emoji,label=label,style=discord.ButtonStyle.blurple)
+        async def callback(interaction:discord.Interaction,b=button):
+            self.user_data.third_pokemon_id = None
+            session.commit()
+            await self.update(interaction)
+
+        button.callback = callback
+        self.add_item(button)
+    async def update(self,interaction):
+        self.user_data = session.query(User).filter_by(user_id=self.user_data.user_id).first()
+        #content = f"Choose the pokemon you want to take from {self.user_data.user_name}"
+
+        self.clear_items()
+        self.first_pokemon_button()
+        self.second_pokemon_button()
+        self.third_pokemon_button()
+
+        await interaction.response.edit_message(view=self)
+
+
 class AdminCommands(commands.Cog):
     def __init__(self,bot):
         self.bot = bot
         self.role_name = data["pokemon_handler_role"]
 
 
-    @discord.app_commands.command(name="create")
-    @discord.app_commands.describe(nickname="nickname",emoji="icon",attack1="attack 1",attack2="attack 2",attack3="attack 3",attack4="attack 4",misc="misc")
-    async def create(self,interaction: discord.Interaction,nickname: str,emoji: str,attack1: str,attack2: str,attack3: str,attack4: str,misc: str = ""):
+    @app_commands.command(name="create-pokemon")
+    @app_commands.describe(nickname="nickname",emoji="icon",attack1="attack 1",attack2="attack 2",attack3="attack 3",attack4="attack 4",misc="misc")
+    async def create_pokemon(self,interaction: discord.Interaction,nickname: str,emoji: str,attack1: str,attack2: str,attack3: str,attack4: str,misc: str = ""):
         required_role = discord.utils.get(interaction.guild.roles,name=self.role_name)
         if required_role not in interaction.user.roles: # This is less secure, but if not used widely, it should be fine
             await interaction.response.send_message("You don't have permissions for this command")
@@ -56,8 +197,8 @@ class AdminCommands(commands.Cog):
         creation_embed.add_field(name="misc",value=new_pokemon.description,inline=False)
 
         await interaction.response.send_message(embed=creation_embed)
-    @discord.app_commands.command(name="give-pokemon",description="Gives a created pokemon by its name")
-    @discord.app_commands.describe(user="User Ping",pokemon_name="Pokemon name")
+    @app_commands.command(name="give-pokemon",description="Gives a created pokemon by its name")
+    @app_commands.describe(user="User Ping",pokemon_name="Pokemon name")
     async def give_pokemon(self,interaction:discord.Interaction,user: discord.Member,pokemon_name: str):
         required_role = discord.utils.get(interaction.guild.roles, name=self.role_name)
         if required_role not in interaction.user.roles:  # This is less secure, but if not used widely, it should be fine
@@ -97,8 +238,8 @@ class AdminCommands(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
-    @discord.app_commands.command(name="check-user",description="Checks the pokemons of the user and sends them to the command caller")
-    @discord.app_commands.describe(user="User Ping")
+    @app_commands.command(name="check-user",description="Checks the pokemons of the user and sends them to the command caller")
+    @app_commands.describe(user="User Ping")
     async def check_user(self,interaction:discord.Interaction,user:discord.Member):
         required_role = discord.utils.get(interaction.guild.roles, name=self.role_name)
         if required_role not in interaction.user.roles:  # This is less secure, but if not used widely, it should be fine
@@ -143,14 +284,9 @@ class AdminCommands(commands.Cog):
         check_user_embed.add_field(name="Third Pokemon",value=third_pokemon_message,inline=False)
 
         await interaction.response.send_message(embed=check_user_embed,ephemeral=True)
-    @discord.app_commands.command(name="take-pokemon")
-    @discord.app_commands.describe(user="User Ping",pokemon_option="Pokemon")
-    @discord.app_commands.choices(pokemon_option=[
-        discord.app_commands.Choice(name="First Pokemon", value='1'),
-        discord.app_commands.Choice(name="Second Pokemon", value='2'),
-        discord.app_commands.Choice(name="Third Pokemon", value='3')
-    ])
-    async def take_pokemon(self,interaction:discord.Interaction,user: discord.Member,pokemon_option: discord.app_commands.Choice[str]):
+    @app_commands.command(name="take-pokemon")
+    @app_commands.describe(user="User Ping")
+    async def take_pokemon(self,interaction:discord.Interaction,user: discord.Member):
         required_role = discord.utils.get(interaction.guild.roles, name=self.role_name)
         if required_role not in interaction.user.roles:  # This is less secure, but if not used widely, it should be fine
             await interaction.response.send_message("You don't have permissions for this command")
@@ -159,42 +295,47 @@ class AdminCommands(commands.Cog):
         if not user_data:
             await interaction.response.send_message("This user doesn't have a player created.")
             return
-        # I know there is a better way to do this...
-        choice = False
-        if pokemon_option.value == '1':
-            user_data.first_pokemon_id = None
-            choice = True
-        elif pokemon_option.value == '2':
-            user_data.second_pokemon_id = None
-            choice = True
-        elif pokemon_option.value == '3':
-            user_data.third_pokemon_id = None
-            choice = True
-        if not choice:
-            await interaction.response.send_message("That slot doesn't have a pokemon.")
+        view = TakeView(user_data)
+        await interaction.response.send_message(f"Choose the pokemon you want to take from {user.name}",view=view,ephemeral=True)
+    @app_commands.command(name="all-pokemons")
+    async def all_pokemons(self,interaction: discord.Interaction):
+        required_role = discord.utils.get(interaction.guild.roles, name=self.role_name)
+        if required_role not in interaction.user.roles:  # This is less secure, but if not used widely, it should be fine
+            await interaction.response.send_message("You don't have permissions for this command")
             return
-        session.commit()
-        await interaction.response.send_message(f"The pokemon has successfully been taken from {user.name}")
-    @d
-    @discord.app_commands.command(name="Edit Pokemon",description="Edits a pokemon, empty fields don't cause any change")
-    @discord.app_commands.describe(ID="Pokemon ID",Nickname="Nickname",Emoji="Emoji Name",Attack1="First Attack",Attack2="Second Attack",Attack3="Third Attack",Attack4="Forth Attack",Misc="Misc")
-    async def edit_pokemon(self,interaction:discord.Interaction,ID: int,Nickname: str,Emoji: str,Attack1: str,Attack2: str,Attack3: str,Attack4: str,Misc: str):
-        pass
+        pokemons = session.query(Pokemon).all()
+        pokemon_embed = discord.Embed(title="Pokemons",color=discord.Colour.brand_green())
+        first_page = pokemons[0:5]
+        for pokemon in first_page:
+            emoji = session.query(Emoji).filter_by(emoji_id=pokemon.emoji_id).first()
+            constructed_emoji = construct_emoji(emoji_id=emoji.emoji_id,emoji_name=emoji.name,animated=emoji.animated)
+            label = f"{constructed_emoji}{pokemon.nickname}"
+            text = f"Attack 1: {pokemon.attack1}\nAttack 2: {pokemon.attack2}\nAttack 3: {pokemon.attack3}\nAttack 4: {pokemon.attack4}\nMisc: {pokemon.description}"
+            pokemon_embed.add_field(name=label,value=text,inline=False)
+        view = PageView(pokemons)
+        await interaction.response.send_message(embed=pokemon_embed,view=view)
 
 
-    @discord.app_commands.command(name="test")
+    @app_commands.command(name="test")
     async def test(self,interaction:discord.Interaction):
         emoji = construct_emoji(emoji_name="ZGeconomy",emoji_id=1397968517328015521,animated=False)
         await interaction.response.send_message(emoji)
 
-    @discord.app_commands.command(name="admin-help")
+    @app_commands.command(name="admin-help")
     async def admin_help(self,interaction:discord.Interaction):
         required_role = discord.utils.get(interaction.guild.roles,name=self.role_name)
         if required_role not in interaction.user.roles:
             await interaction.response.send_message("You don't have permissions for this command")
             return
-        help_embed = discord.Embed(title="Admin Help",description="Shows all the admin commands and what they do.")
-        help_embed.add_field(name="create",value="Used for creating new pokemons, all fields are required except misc.",inline=False)
+        help_embed = discord.Embed(title="Admin Help",description="Shows all the admin commands and what they do.", color=discord.Color.brand_green())
+        help_embed.add_field(name="create-pokemon",value="Used for creating new pokemons, all fields are required except misc.",inline=False)
+        help_embed.add_field(name="check-user",value="Checks the users player profile and returns some data about the player",inline=False)
+        help_embed.add_field(name="create-player",value="Creates the player for the user",inline=False)
+        help_embed.add_field(name="all-pokemons",value="Shows all the available pokemons",inline=False)
+        help_embed.add_field(name="give-pokemon",value="Gives the pokemons to a specified user/player",inline=False)
+        help_embed.add_field(name="take-pokemon",value="Takes the pokemon from the player (doesn't  delete the pokemon)",inline=False)
+        help_embed.add_field(name="sync_bot",value="Used for syncing the bot (used for development purposes)",inline=False)
+
         await interaction.response.send_message(embed=help_embed,ephemeral=True)
         
 #@app_commands.describe(id="ID",title="title",content="content",checkmark="check mark")

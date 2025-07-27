@@ -27,8 +27,22 @@ bot = commands.Bot(command_prefix='.',intents=intents)
 # on ready event
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
+    await asyncio.sleep(1)
     print(f"Bot {bot.user}, ID: {bot.user.id} is ready.")
+    """
+    commands = await bot.tree.fetch_commands()
+    for cmd in commands:
+        if cmd.name == "take-pokemon":  # replace with the outdated one
+            print(f"🗑️ Removing command: {cmd.name}")
+            await bot.http.delete_global_command(bot.application_id, cmd.id)
+    """
+    await bot.tree.sync()
+@bot.hybrid_command()
+async def sync_bot(ctx: commands.Context):
+    synced = await bot.tree.sync()
+    print(synced)
+    await ctx.send("Bot is synced")
+
 @bot.event
 async def on_guild_join(guild: discord.Guild):
     print(f"Joined {guild.name}, trying to create the create/edit role")
@@ -49,6 +63,7 @@ async def main():
         await bot.load_extension("cogs.public_commands")
         await bot.load_extension("cogs.admin_commands")
         await bot.start(token)
+
 asyncio.run(main())
 
 
