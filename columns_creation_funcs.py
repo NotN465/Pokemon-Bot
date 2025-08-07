@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker,relationship
 from models import User,Pokemon,Emoji
+import re
 
 engine = create_engine("sqlite:///database.db", echo=True)
 Base = declarative_base()
@@ -14,18 +15,30 @@ def user_already_created(user_discord_id: str):
 def emoji_already_created(emoji_id: str):
     emoji = session.query(Emoji).filter_by(emoji_id=str(emoji_id)).first()
     return bool(emoji)
+def is_emoji_custom(emoji):
+    pattern = r"<a?:([a-zA-Z0-9_]+):(\d+)>"
+    custom_emoji = re.match(pattern, emoji)
+    if custom_emoji:
+        name = custom_emoji.group(1)
+        emoji_id = custom_emoji.group(2)
+        animated = emoji.startswith("<a:")
+        return [name, emoji_id, animated]
+    return False
+
 
 def user_creation(user_discord_id,user_name,pokemon1_id,pokemon2_id,pokemon3_id):
     new_user = User(user_id=user_discord_id,user_name=user_name,
                     first_pokemon_id=pokemon1_id,
                     second_pokemon_id=pokemon2_id,
-                    third_pokemon_id=pokemon3_id)
+                    third_pokemon_id=pokemon3_id,
+                    image_url=None)
     session.add(new_user)
     session.commit()
     return new_user
 
-def emoji_creation(emoji_id,name,animated,guild_id):
-    new_emoji = Emoji(emoji_id=emoji_id,name=name,animated=animated,guild_id=guild_id)
+
+def emoji_creation(emoji_id,name,animated,guild_id,unicode):
+    new_emoji = Emoji(emoji_id=emoji_id,name=name,animated=animated,guild_id=guild_id,unicode=unicode)
     session.add(new_emoji)
     session.commit()
     return new_emoji
@@ -38,6 +51,8 @@ def pokemon_creation(nickname,emoji_id,attack1,attack2,attack3,attack4,descripti
     session.add(new_pokemon)
     session.commit()
     return new_pokemon
-def construct_emoji(emoji_name,emoji_id,animated: bool):
+def construct_emoji(emoji_name,emoji_id,animated: bool, unicode: bool):
+    if unicode:
+        return emoji_name
     return f"<{'a' if animated else ''}:{emoji_name}:{emoji_id}>"
 

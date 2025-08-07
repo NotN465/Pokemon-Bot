@@ -1,3 +1,5 @@
+import re
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker,relationship
 from sqlalchemy import Column, Integer, String,ForeignKey,Boolean
@@ -14,6 +16,7 @@ class User(Base):
     id = Column(Integer,primary_key=True,index=True)
     user_id = Column(String,unique=True)
     user_name = Column(String)
+    image_url = Column(String)
 
     first_pokemon_id = Column(Integer,ForeignKey("pokemon.id"))
     second_pokemon_id = Column(Integer,ForeignKey("pokemon.id"))
@@ -40,12 +43,25 @@ class Pokemon(Base):
 class Emoji(Base):
     __tablename__ = 'emoji'
     id = Column(Integer, primary_key=True, index=True)
+    unicode = Column(Boolean)
     emoji_id = Column(String)
     name = Column(String)
     animated = Column(Boolean)
     guild_id = Column(String)
 
     pokemon = relationship("Pokemon",back_populates="emoji")
+# emoji = session.query(Emoji).filter_by(id=10).first()
+# session.delete(emoji)
+# session.commit()
+"""
+emoji = "<:ZGeconomy:1397968517328015521>"
+pattern = r"<:([a-zA-Z0-9_]+):(\d+)>"
+custom_emoji = re.match(pattern,emoji)
+if custom_emoji:
+    name = custom_emoji.group(1)
+    emoji_id = custom_emoji.group(2)
+    print(f"Name: {name}, ID: {emoji_id}")
+"""
 
 
 Base.metadata.create_all(bind=engine)
