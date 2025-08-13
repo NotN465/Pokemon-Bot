@@ -11,6 +11,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # Models created specifically for this bot
 from columns_creation_funcs import user_already_created,emoji_already_created,user_creation,emoji_creation,pokemon_creation,construct_emoji,is_emoji_custom
 from models import Pokemon,User,Emoji
+from pathlib import Path
 
 import logging
 
@@ -22,7 +23,11 @@ Base = declarative_base()
 Session = sessionmaker(bind=engine)
 session = Session()
 
-with open(r"D:\pythonProject1\Pokemon bot\config.json") as f:
+parent_dir = Path(__file__).resolve().parent.parent
+
+file_path = parent_dir / "config.json"
+
+with open(file_path) as f:
     data = json.load(f)
 class EditPokemon(discord.ui.View):
     def __init__(self,pokemon,bot):
