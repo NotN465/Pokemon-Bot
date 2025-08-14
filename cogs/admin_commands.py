@@ -175,7 +175,7 @@ class EditPokemon(discord.ui.View):
 
 
 class PageView(discord.ui.View):
-    def __init__(self,pokemons,give_buttons,edit_buttons,bot):
+    def __init__(self,pokemons,give_buttons,edit_buttons,bot,user):
         super().__init__()
         self.page = 5
         self.right_button = None
@@ -185,6 +185,7 @@ class PageView(discord.ui.View):
         self.give_buttons_list = []
         self.edit_buttons_list = []
         self.bot = bot
+        self.user = user
 
         self.left_arrow_button_func()
         self.right_arrow_button_func()
@@ -217,7 +218,7 @@ class PageView(discord.ui.View):
         self.add_item(self.left_button)
     def make_give_callback(self,pokemon,pokemons):
         async def callback(interaction: discord.Interaction):
-            user_data = session.query(User).filter_by(user_id=str(interaction.user.id)).first()
+            user_data = session.query(User).filter_by(user_id=str(self.user.id)).first()
             if not user_data.first_pokemon_id:
                 user_data.first_pokemon_id = pokemon.id
             elif not user_data.second_pokemon_id:
@@ -484,7 +485,7 @@ class AdminCommands(commands.Cog):
             label = f"{constructed_emoji}{pokemon.nickname}"
             text = f"{pokemon.attack1}\n{pokemon.attack2}\n{pokemon.attack3}\n{pokemon.attack4}\nNotes: {pokemon.description}"
             pokemon_embed.add_field(name=label,value=text,inline=False)
-        view = PageView(pokemons,True,False,self.bot)
+        view = PageView(pokemons,True,False,self.bot,user)
         await interaction.response.send_message(embed=pokemon_embed,view=view)
 
     @app_commands.command(name="check-player",description="Checks the users player profile and returns some data about the player")
@@ -548,7 +549,7 @@ class AdminCommands(commands.Cog):
             await interaction.response.send_message("You don't have permissions for this command")
             return
         pokemons = session.query(Pokemon).all()
-        view = PageView(pokemons,False,True,self.bot)
+        view = PageView(pokemons,False,True,self.bot,None)
         pokemon_embed = discord.Embed(title="Pokemons",color=discord.Colour.brand_green())
         first_page = pokemons[0:5]
         for pokemon in first_page:
@@ -693,7 +694,7 @@ class AdminCommands(commands.Cog):
             label = f"{constructed_emoji}{pokemon.nickname}"
             text = f"{pokemon.attack1}\n{pokemon.attack2}\n{pokemon.attack3}\n{pokemon.attack4}\nNotes: {pokemon.description}"
             pokemon_embed.add_field(name=label,value=text,inline=False)
-        view = PageView(pokemons,False,False,self.bot)
+        view = PageView(pokemons,False,False,self.bot, None)
         await interaction.response.send_message(embed=pokemon_embed,view=view)
 
     """
