@@ -489,12 +489,12 @@ class AdminCommands(commands.Cog):
 
     @app_commands.command(name="check-player",description="Checks the users player profile and returns some data about the player")
     @app_commands.describe(user="User Ping")
-    async def check_user(self,interaction:discord.Interaction,user:discord.Member):
+    async def check_user(self,interaction:discord.Interaction,user: discord.Member):
         required_role = discord.utils.get(interaction.guild.roles, name=self.role_name)
         if required_role not in interaction.user.roles:  # This is less secure, but if not used widely, it should be fine
             await interaction.response.send_message("You don't have permissions for this command")
             return
-        user_data = session.query(User).filter_by(user_id=str(interaction.user.id)).first()
+        user_data = session.query(User).filter_by(user_id=str(user.id)).first()
         if not user_data:
             await interaction.response.send_message("This user doesn't have a player created.")
             return
